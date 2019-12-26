@@ -1,8 +1,7 @@
-
-use std::str::FromStr;
 use std::borrow::Cow;
-use std::process::{Command};
 use std::io;
+use std::process::Command;
+use std::str::FromStr;
 
 use super::super::regex::{Match, Regex};
 
@@ -19,21 +18,29 @@ pub fn producer(cmd: Command) -> TrollExecution {
 
     // inspect the output
     match output.status.code() {
-        Option::None | Option::Some(0) => { },
+        Option::None | Option::Some(0) => {}
         Option::Some(value) => {
-            return TrollExecution::RunFailure(value, String::from_utf8_lossy(output.stderr.as_slice()).to_string());
+            return TrollExecution::RunFailure(
+                value,
+                String::from_utf8_lossy(output.stderr.as_slice()).to_string(),
+            );
         }
     };
 
     // parse the output
-    TrollExecution::Success(String::from_utf8_lossy(output.stdout.as_slice()).lines().filter_map(TrollLine::new).collect())
+    TrollExecution::Success(
+        String::from_utf8_lossy(output.stdout.as_slice())
+            .lines()
+            .filter_map(TrollLine::new)
+            .collect(),
+    )
 }
 
 /// TrollExecution describes the state of the run
 pub enum TrollExecution {
     ExecFailure(io::Error),
-    RunFailure(i32,String),
-    Success(Vec<TrollLine>)
+    RunFailure(i32, String),
+    Success(Vec<TrollLine>),
 }
 
 lazy_static! {
@@ -44,7 +51,7 @@ lazy_static! {
 }
 
 /// TrollLine returns a line of tests of troll testing
-#[derive(Clone,Copy)]
+#[derive(Clone, Copy)]
 pub struct TrollLine {
     pub base_value: f64,
     pub prob: f64,
@@ -136,4 +143,3 @@ fn expodential_test() {
     assert_eq!(out.prob, 7.14449016918e-5f64);
     assert_eq!(out.accum, 9.82367398262e-5f64);
 }
-

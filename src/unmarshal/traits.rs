@@ -1,7 +1,6 @@
-
 use std::process::Command;
 
-use super::runs::{TrollRun};
+use super::runs::TrollRun;
 
 /// SetArgs handles settingup a specific troll run
 pub trait SetArgs {
