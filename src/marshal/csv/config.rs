@@ -6,7 +6,7 @@ use super::super::super::serde::Deserialize;
 
 use super::BuildCSVOutput;
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Default)]
 pub struct CSVConfig {
     pub path: Option<String>,
     pub seperator: Option<char>,
@@ -15,7 +15,7 @@ pub struct CSVConfig {
     pub eol: Option<EOLSpecification>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Default)]
 pub struct EOLSpecification {
     pub lf: Option<bool>,
     pub cr: Option<bool>,

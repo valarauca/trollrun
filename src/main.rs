@@ -8,8 +8,9 @@ extern crate regex;
 extern crate serde;
 extern crate toml;
 
-mod exec;
-mod marshal;
+pub mod exec;
+pub mod marshal;
+pub mod norm;
 //mod unmarshal;
 
 fn main() {
