@@ -10,7 +10,7 @@ extern crate toml;
 
 mod exec;
 mod marshal;
-mod unmarshal;
+//mod unmarshal;
 
 fn main() {
     println!("Hello, world!");
