@@ -1,7 +1,6 @@
 use super::super::exec::parser::TrollLine;
 
 /// appends records to the end to ensure there is always a zero record.
-
 pub fn normalize(arg: &mut Vec<Vec<TrollLine>>) -> Vec<Vec<f64>> {
     let max = find_maximum_base_value(arg);
 
@@ -21,7 +20,8 @@ pub fn normalize(arg: &mut Vec<Vec<TrollLine>>) -> Vec<Vec<f64>> {
                 arg[index].push(TrollLine::with_base_and_accum(temp_max, 0f64));
             }
         }
-
+        output.push(arg[index].iter().map(|item| item.accum).collect());
+        /*
         let mut temp = Vec::with_capacity(arg[index].len());
         let mut iter = arg[index].iter().peekable();
         loop {
@@ -39,9 +39,40 @@ pub fn normalize(arg: &mut Vec<Vec<TrollLine>>) -> Vec<Vec<f64>> {
                 (_, _) => break,
             };
         }
-        output.push(temp);
+        */
     }
     output
+}
+
+#[test]
+fn test_normalize() {
+    let mut x = vec![
+        vec![TrollLine::zero()],
+        vec![
+            TrollLine {
+                base_value: 1,
+                prob: 25.0,
+                accum: 100.0,
+            },
+            TrollLine {
+                base_value: 2,
+                prob: 75.0,
+                accum: 75.0,
+            },
+        ],
+        vec![TrollLine::with_base_and_accum(10, 100f64)],
+    ];
+    let o = normalize(&mut x);
+    assert_eq!(o.len(), 3);
+
+    // check the 0 value
+    assert_eq!(o[0][0], 0.0);
+    assert_eq!(o[0][1], 0.0);
+    assert_eq!(o[0][2], 0.0);
+
+    assert_eq!(o[1][0], 100.0);
+    assert_eq!(o[1][1], 100.0);
+    assert_eq!(o[1][2], 75.0);
 }
 
 fn find_maximum_base_value(arg: &Vec<Vec<TrollLine>>) -> usize {
@@ -63,6 +94,17 @@ fn find_maximum_base_value(arg: &Vec<Vec<TrollLine>>) -> usize {
         Option::None => 0,
         Option::Some(x) => x,
     }
+}
+
+#[test]
+fn test_find_maximum_base_value() {
+    let x = vec![
+        vec![TrollLine::zero()],
+        vec![],
+        vec![TrollLine::with_base_and_accum(10, 100f64)],
+    ];
+    let max = find_maximum_base_value(&x);
+    assert_eq!(max, 10);
 }
 
 fn norm_to_zero(arg: &mut Vec<TrollLine>) {
