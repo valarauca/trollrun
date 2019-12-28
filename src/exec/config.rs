@@ -31,9 +31,6 @@ impl RunKind {
                 }
             }
         };
-        cmd.stderr(Stdio::piped());
-        cmd.stdout(Stdio::piped());
-        cmd.stdin(Stdio::null());
         TrollRun { cmd, name }
     }
 }

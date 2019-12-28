@@ -1,110 +1,54 @@
 use std::collections::BTreeMap;
-use std::process::{Command, Stdio};
 
 use super::serde::Deserialize;
-use super::toml::{from_str, Value};
+use super::toml::from_str;
 
-mod traits;
-pub use self::traits::{BuildCommands, SetArgs};
-mod runs;
-pub use self::runs::TrollRun;
-mod parser;
-pub use self::parser::TrollLine;
+use super::exec::config::RunKind;
+use super::marshal::csv::CSVConfig;
 
 /// Top level configuration format
 #[derive(Clone, Deserialize, Debug)]
 pub struct ConfigFormat {
+    #[serde(default)]
     pub troll: Option<TrollConfig>,
+    #[serde(default)]
     pub csv: Option<CSVConfig>,
+    #[serde(default)]
     pub runs: BTreeMap<String, RunKind>,
 }
 impl ConfigFormat {
-    // boostrap sets up the initial arguments of a command
-    fn bootstrap(&self) -> Command {
-        let mut cmd = match &self.troll {
-            &Option::None => {
-                let mut cmd = Command::new("troll");
-                cmd.arg("0");
-                cmd
-            }
-            &Option::Some(ref config) => {
-                let mut cmd = Command::new(&config.path);
-                match &config.iterations {
-                    &Option::Some(ref val) if *val <= 12 => {
-                        cmd.arg(format!("{}", val));
-                    }
-                    _ => {
-                        cmd.arg("0");
-                    }
-                };
-                cmd
-            }
+    // load a config from the command line interface
+    pub fn new() -> ConfigFormat {
+        let path = match std::env::args().skip(1).next() {
+            Option::None => panic!("provide 1 argument to run that config"),
+            Option::Some(path) => path,
         };
-        cmd.stdin(Stdio::null());
-        cmd.stderr(Stdio::piped());
-        cmd.stdout(Stdio::piped());
-        cmd
+        let config = match ::std::fs::read_to_string(&path) {
+            Err(e) => panic!("failed to open:'{}' error:'{:?}'", &path, e),
+            Ok(config) => config,
+        };
+        match from_str::<ConfigFormat>(&config) {
+            Err(e) => panic!("failed to parse config:'{}' error:'{:?}'", &path, e),
+            Ok(config) => config,
+        }
     }
-}
-impl BuildCommands for ConfigFormat {
-    fn build_cmd(&self) -> Vec<TrollRun> {
-        self.runs
-            .iter()
-            .map(|(k, v)| -> TrollRun {
-                let mut cmd = self.bootstrap();
-                v.set_args(&mut cmd);
-                TrollRun {
-                    cmd,
-                    name: k.clone(),
-                }
-            })
-            .collect()
+
+    /// returns the path to the damn executable
+    pub fn get_troll_path<'a>(&'a self) -> Option<String> {
+        match &self.troll {
+            &Option::Some(ref cfg) => match &cfg.path {
+                &Option::Some(ref path) => Some(path.clone()),
+                _ => None,
+            },
+            _ => None,
+        }
     }
 }
 
+/// How do you want to run troll
 #[derive(Clone, Deserialize, Debug)]
 pub struct TrollConfig {
-    pub path: String,
-    pub iterations: Option<usize>,
-}
-
-#[derive(Clone, Deserialize, Debug)]
-pub struct CSVConfig {
-    pub path: String,
-}
-
-#[derive(Clone, Deserialize, Debug)]
-#[serde(untagged)]
-pub enum RunKind {
-    Trivial(String),
-    ComplexRun(ComplexRun),
-}
-impl SetArgs for RunKind {
-    fn set_args(&self, cmd: &mut Command) {
-        match self {
-            &RunKind::Trivial(ref arg) => {
-                cmd.arg(arg);
-            }
-            &RunKind::ComplexRun(ref complex) => {
-                complex.set_args(cmd);
-            }
-        }
-    }
-}
-
-#[derive(Clone, Deserialize, Debug)]
-pub struct ComplexRun {
-    pub path: String,
-    #[serde(default)]
-    pub args: BTreeMap<String, usize>,
-}
-impl SetArgs for ComplexRun {
-    fn set_args(&self, cmd: &mut Command) {
-        cmd.arg(&self.path);
-        for (k, v) in self.args.iter() {
-            cmd.arg(format!("{}={}", k, v));
-        }
-    }
+    pub path: Option<String>,
 }
 
 #[test]

@@ -2,10 +2,12 @@ use super::super::marshal::csv::{BuildCSVOutput, CSVConfig};
 
 use super::super::exec::parser::TrollLine;
 use super::super::exec::runs::{RunResult, TrollOutput};
+use super::norm::normalize;
 
-pub fn do_everything(stuff: Vec<TrollOutput>, config: &Option<CSVConfig>) {
+pub fn serialize_output_to_csv(stuff: Vec<TrollOutput>, config: &Option<CSVConfig>) {
     // panic if a run failed
-    let (output_names, output_data) = filter_output(stuff);
+    let (output_names, mut output_data) = filter_output(stuff);
+    let data = normalize(&mut output_data);
 
     // build config
     let cfg = match config {
@@ -16,22 +18,10 @@ pub fn do_everything(stuff: Vec<TrollOutput>, config: &Option<CSVConfig>) {
 
     // write out headers
     output_method.write_record(&output_names).unwrap();
-    for arg in output_data {
-        ensure_count(&arg);
+    for arg in data.as_slice().iter() {
+        output_method.serialize(arg.as_slice()).unwrap();
     }
-}
-
-fn ensure_count(arg: &Vec<TrollLine>) {
-    let mut base_value = Option::<f64>::None;
-    for item in arg.iter() {
-        if base_value.is_some() {
-            if base_value.clone().unwrap() != item.base_value {
-                panic!("non-normalized output detected. Base values do not align");
-            }
-        } else {
-            ::std::mem::replace(&mut base_value, Some(item.base_value));
-        }
-    }
+    output_method.flush().unwrap();
 }
 
 // clear up the data
