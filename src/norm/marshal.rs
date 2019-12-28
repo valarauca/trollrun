@@ -20,6 +20,7 @@ pub fn serialize_output_to_csv(stuff: Vec<TrollOutput>, config: &Option<CSVConfi
     output_method.write_record(&output_names).unwrap();
     for arg in data.as_slice().iter() {
         output_method.serialize(arg.as_slice()).unwrap();
+        output_method.write_record(Option::<&[u8]>::None).unwrap();
     }
     output_method.flush().unwrap();
 }
