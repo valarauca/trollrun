@@ -37,11 +37,8 @@ fn filter_output(stuff: Vec<TrollOutput>) -> (Vec<String>, Vec<Vec<TrollLine>>) 
                 println!("{} failed with error:'{:?}'", output.name, err);
                 crash_flag = true;
             }
-            RunResult::Error(flag, stdout, stderr) => {
-                println!(
-                    "{} caused troll crash return_code:'{}' stdout:'{}' stderr:'{}'",
-                    output.name, flag, stdout, stderr
-                );
+            RunResult::Error(err) => {
+                println!("{} caused troll crash error:'{}'", output.name, err,);
                 crash_flag = true;
             }
             RunResult::Success(data) => {
