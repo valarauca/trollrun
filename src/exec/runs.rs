@@ -66,10 +66,9 @@ impl RunResult {
 impl TrollRun {
     /// run handles converting the plan to execute into an actual execution
     pub fn run(self) -> TrollOutput {
-        let mut s = self;
         TrollOutput {
-            name: s.name,
-            result: RunResult::new(s.cmd),
+            name: self.name,
+            result: RunResult::new(self.cmd),
         }
     }
 }

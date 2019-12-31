@@ -1,5 +1,5 @@
 use std::iter::{FromIterator, IntoIterator, Iterator};
-use std::ops::Index;
+use std::ops::{Index, IndexMut};
 
 use super::parser::TrollLine;
 
@@ -40,14 +40,20 @@ impl TrollData {
     }
 }
 impl Index<usize> for TrollData {
-    type Output = f64;
-    fn index<'a>(&'a self, i: usize) -> &'a f64 {
-        &self.data.data[i].prob
+    type Output = DataPoint;
+    fn index<'a>(&'a self, i: usize) -> &'a DataPoint {
+        &self.data.data[i]
     }
 }
+impl IndexMut<usize> for TrollData {
+    fn index_mut<'a>(&'a mut self, i: usize) -> &'a mut DataPoint {
+        &mut self.data.data[i]
+    }
+}
+
 impl FromIterator<TrollLine> for TrollData {
     fn from_iter<T: IntoIterator<Item = TrollLine>>(iter: T) -> TrollData {
-        let mut iter = iter.into_iter();
+        let iter = iter.into_iter();
 
         // see if we can do pre-sizing
         let mut vec = match iter.size_hint() {
@@ -75,32 +81,58 @@ impl FromIterator<TrollLine> for TrollData {
             // now we can just push our point
             vec.append(DataPoint::from(item));
         }
+
+        // now we loop over the array (in reverse order) and double check accumlation values
+        let mut accum_total = 0.0;
+        for i in (0..vec.len()).rev() {
+            accum_total += vec[i].prob;
+            vec[i].accum = accum_total;
+        }
+
+        // shove the data out the door
         TrollData { data: vec }
     }
 }
 
 #[derive(Clone, Default)]
-struct DataPoint {
-    value: usize,
-    prob: f64,
+pub struct DataPoint {
+    pub value: usize,
+    pub prob: f64,
+    pub accum: f64,
 }
 impl From<TrollLine> for DataPoint {
     fn from(arg: TrollLine) -> DataPoint {
         DataPoint {
             value: arg.base_value,
             prob: arg.prob,
+            accum: arg.accum,
         }
     }
 }
 impl DataPoint {
     fn prob_zero(value: usize) -> DataPoint {
-        DataPoint { value, prob: 0.0 }
+        DataPoint {
+            value,
+            prob: 0.0,
+            accum: 0.0,
+        }
     }
 }
 
 #[derive(Clone, Default)]
 struct DataCollector {
     data: Vec<DataPoint>,
+}
+impl Index<usize> for DataCollector {
+    type Output = DataPoint;
+    fn index<'a>(&'a self, i: usize) -> &'a DataPoint {
+        &self.data[i]
+    }
+}
+impl IndexMut<usize> for DataCollector {
+    fn index_mut<'a>(&'a mut self, i: usize) -> &'a mut DataPoint {
+        &mut self.data[i]
+    }
 }
 impl DataCollector {
     fn with_capacity(size: usize) -> Self {
@@ -177,9 +209,9 @@ fn test_full_output() {
     assert_eq!(output.len(), expectation.len());
     for index in 0..output.len() {
         assert_eq!(
-            output[index], expectation[index],
+            output[index].prob, expectation[index],
             "for index:'{}' found value:'{}' expected:'{}'",
-            index, output[index], expectation[index]
+            index, output[index].prob, expectation[index]
         );
     }
 }
@@ -189,9 +221,9 @@ fn test_weird_pylon_table() {
     let dut = include_str!("pylon.data");
     let output: TrollData = dut.lines().filter_map(TrollLine::new).collect();
 
-    assert_eq!(output[0], 13.2305687116);
-    assert_eq!(output[14], 9.6660149794);
-    assert_eq!(output[15], 0.0);
-    assert_eq!(output[16], 9.6660149794);
-    assert_eq!(output[17], 0.0);
+    assert_eq!(output[0].prob, 13.2305687116);
+    assert_eq!(output[14].prob, 9.6660149794);
+    assert_eq!(output[15].prob, 0.0);
+    assert_eq!(output[16].prob, 9.6660149794);
+    assert_eq!(output[17].prob, 0.0);
 }
