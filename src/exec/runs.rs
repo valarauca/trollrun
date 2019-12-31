@@ -1,6 +1,7 @@
 use std::io::Error;
 use std::process::Command;
 
+use super::data::TrollData;
 use super::parser::TrollLine;
 
 /// TrollRun is a labled run of troll ready to be executed
@@ -14,12 +15,35 @@ pub struct TrollOutput {
     pub name: String,
     pub result: RunResult,
 }
+impl TrollOutput {
+    pub fn into_result(self) -> Option<TrollRecordable> {
+        match self.result {
+            RunResult::ExecErr(e) => {
+                eprintln!("{} failed to exec with error:'{:?}'", self.name, e);
+                None
+            }
+            RunResult::Error(s) => {
+                eprintln!("{} failed to exec with error:'{:?}'", self.name, s);
+                None
+            }
+            RunResult::Success(data) => Some(TrollRecordable {
+                name: self.name,
+                result: data,
+            }),
+        }
+    }
+}
+
+pub struct TrollRecordable {
+    pub name: String,
+    pub result: TrollData,
+}
 
 /// RunResult contains the output of the orginal data.
 pub enum RunResult {
     ExecErr(Error),
     Error(String),
-    Success(Vec<TrollLine>),
+    Success(TrollData),
 }
 impl From<&'static str> for RunResult {
     fn from(arg: &'static str) -> RunResult {
@@ -47,7 +71,7 @@ impl RunResult {
 
         // did the command succeed or fail?
         // troll doesn't use return codes, because of course not
-        let lines: Vec<TrollLine> = match (output.stdout.len(), output.stderr.len()) {
+        let lines: TrollData = match (output.stdout.len(), output.stderr.len()) {
             (0, 0) => return RunResult::from("no stdout/stderr returned from execution"),
             (_, 0) => String::from_utf8_lossy(output.stdout.as_slice())
                 .lines()
@@ -55,7 +79,7 @@ impl RunResult {
                 .collect(),
             _ => return RunResult::from(output.stderr.as_slice()),
         };
-        if lines.len() == 0 {
+        if lines.is_empty() {
             RunResult::from("valid data was returned, but parsing failed")
         } else {
             RunResult::Success(lines)

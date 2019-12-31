@@ -13,7 +13,7 @@ pub enum RunKind {
     ComplexRun(ComplexRun),
 }
 impl RunKind {
-    pub fn into_exec(&self, name: String, troll_path: &Option<String>) -> TrollRun {
+    pub fn into_exec(&self, name: &String, troll_path: &Option<String>) -> TrollRun {
         // build the initial command structure
         let mut cmd = match troll_path {
             &Option::None => Command::new("troll"),
@@ -31,7 +31,10 @@ impl RunKind {
                 }
             }
         };
-        TrollRun { cmd, name }
+        TrollRun {
+            cmd,
+            name: name.to_string(),
+        }
     }
 }
 

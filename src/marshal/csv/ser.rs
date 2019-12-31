@@ -61,7 +61,7 @@ impl CSVWriter {
     }
 
     /// writes a well formatted field
-    pub fn writer_data(&mut self, row: &[f64]) -> Result<()> {
+    pub fn write_data(&mut self, row: &[f64]) -> Result<()> {
         for field in row.iter() {
             self.writer.write_field(format_float(
                 field,

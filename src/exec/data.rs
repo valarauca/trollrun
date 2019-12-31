@@ -9,10 +9,12 @@ pub struct TrollData {
     data: DataCollector,
 }
 impl TrollData {
+    /// how long is this chunk of data?
     pub fn len(&self) -> usize {
         self.data.len()
     }
 
+    /// is there no data?
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }
@@ -29,13 +31,12 @@ impl TrollData {
     /// pad_to will insert junk data to ensure our last value is equal to the requested
     /// this junk data is "zero probability events"
     pub fn pad_to(&mut self, last_value: usize) {
-        loop {
-            let own_current_last_value = self.last_value();
-            if own_current_last_value >= last_value {
-                break;
-            }
-            self.data
-                .append(DataPoint::prob_zero(own_current_last_value));
+        let own_last = self.last_value();
+        if own_last >= last_value {
+            return;
+        }
+        for curr in (own_last + 1)..(last_value + 1) {
+            self.data.append(DataPoint::prob_zero(curr));
         }
     }
 }
@@ -206,6 +207,7 @@ fn test_full_output() {
         2.58117479171e-7,
         4.30195798619e-8,
     ];
+    assert_eq!(output.last_value(), 36);
     assert_eq!(output.len(), expectation.len());
     for index in 0..output.len() {
         assert_eq!(

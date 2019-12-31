@@ -4,7 +4,8 @@ use super::serde::Deserialize;
 use super::toml::from_str;
 
 use super::exec::config::RunKind;
-use super::marshal::csv::CSVConfig;
+use super::exec::runs::TrollRun;
+use super::marshal::csv::config::CSVConfig;
 
 /// Top level configuration format
 #[derive(Clone, Deserialize, Debug)]
@@ -33,8 +34,17 @@ impl ConfigFormat {
         }
     }
 
+    /// builds all the items that need to be ran
+    pub fn build_runs(&self) -> Vec<TrollRun> {
+        let troll_path = self.get_troll_path();
+        self.runs
+            .iter()
+            .map(|(name, run)| run.into_exec(name, &troll_path))
+            .collect()
+    }
+
     /// returns the path to the damn executable
-    pub fn get_troll_path<'a>(&'a self) -> Option<String> {
+    fn get_troll_path<'a>(&'a self) -> Option<String> {
         match &self.troll {
             &Option::Some(ref cfg) => match &cfg.path {
                 &Option::Some(ref path) => Some(path.clone()),
