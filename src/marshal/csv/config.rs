@@ -4,16 +4,62 @@ use std::io::{stdout, Write};
 use super::super::super::csv::{QuoteStyle, Terminator, Writer, WriterBuilder};
 use super::super::super::serde::Deserialize;
 
-use super::BuildCSVOutput;
+use super::ser::CSVWriter;
 
 #[derive(Clone, Debug, Deserialize, Default)]
 pub struct CSVConfig {
     pub path: Option<String>,
     pub seperator: Option<char>,
     pub quote: Option<char>,
+    pub precision: Option<usize>,
+    pub zero_pad: Option<usize>,
+    pub flush_to_zero: Option<f64>,
     #[serde(default)]
     pub eol: Option<EOLSpecification>,
 }
+impl CSVConfig {
+    /// handles deserializing the input configuration junk
+    pub fn build_config(config: &Option<Self>) -> CSVWriter {
+        let normal = Self::default();
+        let config = match config {
+            &Option::None => &normal,
+            &Option::Some(ref arg) => arg,
+        };
+        let eol = get_eol_specification(&config.eol);
+
+        // determine where to write to
+        let output: Box<dyn Write> = match &config.path {
+            &Option::Some(ref path) => {
+                match OpenOptions::new()
+                    .read(false)
+                    .write(true)
+                    .create(true)
+                    .truncate(true)
+                    .open(path)
+                {
+                    Err(e) => panic!("could not open file:'{}' error:'{:?}'", path, e),
+                    Ok(file) => Box::new(file),
+                }
+            }
+            _ => Box::new(stdout()),
+        };
+
+        CSVWriter::new(
+            output,
+            &config.seperator,
+            &config.quote,
+            &config.precision,
+            &config.zero_pad,
+            &config.flush_to_zero,
+            eol,
+        )
+    }
+}
+
+/*
+ * EOL Handling
+ *
+ */
 
 #[derive(Clone, Debug, Deserialize, Default)]
 pub struct EOLSpecification {
@@ -45,60 +91,4 @@ fn get_eol_specification(eol: &Option<EOLSpecification>) -> Terminator {
         _ => {}
     };
     Terminator::Any(13)
-}
-
-// construct the CSV output
-impl BuildCSVOutput for CSVConfig {
-    fn build(&self) -> Writer<Box<dyn Write>> {
-        let mut w = WriterBuilder::new();
-        // we will never have headers, well we will
-        // but not as this library thinks, we specify
-        // them at runtime
-        w.has_headers(false);
-
-        // set up field seperator
-        match &self.seperator {
-            &Option::Some(ref c) if c.is_ascii() => {
-                w.delimiter(*c as u32 as u8);
-            }
-            _ => {
-                // ascii comma
-                w.delimiter(44);
-            }
-        };
-
-        // set up optional wrapping
-        match &self.quote {
-            &Option::Some(ref c) if c.is_ascii() => {
-                w.quote(*c as u32 as u8);
-                // if you force a quote style it'll always be used.
-                w.quote_style(QuoteStyle::Always);
-            }
-            _ => {
-                // ascii quote
-                w.quote(34);
-            }
-        };
-
-        // figure out how to terminator lines
-        w.terminator(get_eol_specification(&self.eol));
-
-        // determine where to write to
-        let output: Box<dyn Write> = match &self.path {
-            &Option::Some(ref path) => {
-                match OpenOptions::new()
-                    .read(false)
-                    .write(true)
-                    .create(true)
-                    .truncate(true)
-                    .open(path)
-                {
-                    Err(e) => panic!("could not open file:'{}' error:'{:?}'", path, e),
-                    Ok(file) => Box::new(file),
-                }
-            }
-            _ => Box::new(stdout()),
-        };
-        w.from_writer(output)
-    }
 }

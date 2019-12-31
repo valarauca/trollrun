@@ -14,9 +14,10 @@ use self::exec::exec::collect_output;
 pub mod marshal;
 pub mod unmarshal;
 use self::unmarshal::ConfigFormat;
-pub mod norm;
-use self::norm::marshal::serialize_output_to_csv;
+//pub mod norm;
+//use self::norm::marshal::serialize_output_to_csv;
 
+/*
 fn main() {
     // load config
     let config = ConfigFormat::new();
@@ -32,3 +33,5 @@ fn main() {
     );
     serialize_output_to_csv(simulation_result, &config.csv);
 }
+
+*/
