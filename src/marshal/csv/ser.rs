@@ -1,6 +1,9 @@
+use std::io;
+
 use super::super::super::csv::{QuoteStyle, Result, Terminator, Writer, WriterBuilder};
 use super::super::super::serde::Deserialize;
-use std::io;
+
+use super::super::super::exec::runs::TrollRecordable;
 
 /// CSVWriter handles the semantics of writing data to the underlying file
 pub struct CSVWriter {
@@ -10,7 +13,7 @@ pub struct CSVWriter {
     writer: Writer<Box<dyn io::Write>>,
 }
 impl CSVWriter {
-    /// Create a new writer
+    /// Create a new writer from the configuration arguments
     pub fn new(
         writer: Box<dyn io::Write>,
         seperator: &Option<char>,
@@ -51,8 +54,35 @@ impl CSVWriter {
         }
     }
 
+    /// handles splitting & mangling the data before writing it
+    pub fn serialize_output(&mut self, data: Vec<TrollRecordable>) -> Result<()> {
+        let mut data = data;
+        // remove cut off data, and padd to equal length
+        let longest = preprocess(&self.flush_to_zero, &mut data);
+        // split our data into 2 different components (names & stats)
+        let (names, stats) = break_it_up(data, longest);
+
+        // build a buffer to hold our serialized data
+        let mut output_buffer: Vec<f64> = (0..names.len()).map(|_| 0.0).collect();
+
+        // write the names of the columns
+        self.write_headers(names.as_slice())?;
+
+        // loop over our stats (row by row)
+        for row in 0..longest {
+            // loop over each collect (column by column)
+            for column in 0..names.len() {
+                // row values into our temporary buffer
+                output_buffer[column] = stats[column][row];
+            }
+            // serialize the output
+            self.write_data(output_buffer.as_slice())?;
+        }
+        Ok(())
+    }
+
     /// writer_headers starts the CSV serialization process by creating the header structure
-    pub fn write_headers(&mut self, headers: &[String]) -> Result<()> {
+    fn write_headers(&mut self, headers: &[String]) -> Result<()> {
         for header in headers {
             self.writer.write_field(&header)?;
         }
@@ -61,7 +91,7 @@ impl CSVWriter {
     }
 
     /// writes a well formatted field
-    pub fn write_data(&mut self, row: &[f64]) -> Result<()> {
+    fn write_data(&mut self, row: &[f64]) -> Result<()> {
         for field in row.iter() {
             self.writer.write_field(format_float(
                 field,
@@ -79,6 +109,71 @@ impl CSVWriter {
         let mut s = self;
         s.writer.flush()
     }
+}
+
+/*
+ * Pre-Processing Helpers to manage data alignment
+ *
+ */
+
+/// remove values which config says are unimportant
+fn drop_trivial(flush_to_zero: &f64, data: &mut Vec<TrollRecordable>) {
+    if *flush_to_zero <= 0.0 {
+        return;
+    }
+    for vector in data.iter_mut() {
+        vector.result.trim_less_than(flush_to_zero);
+    }
+}
+
+/// find the longest dataset
+fn find_data_maximum(data: &Vec<TrollRecordable>) -> usize {
+    data.iter()
+        .map(|vector| vector.result.last_value())
+        .fold(0usize, |max, curr| if curr > max { curr } else { max })
+}
+
+/// insert junk 0's to ensure each dataset is of equal length
+fn pad_to_maximum(data: &mut Vec<TrollRecordable>, maximum: usize) {
+    for vector in data.iter_mut() {
+        vector.result.pad_to(maximum);
+    }
+}
+
+fn preprocess(cutoff: &f64, data: &mut Vec<TrollRecordable>) -> usize {
+    drop_trivial(cutoff, data);
+    let longest = find_data_maximum(data);
+    pad_to_maximum(data, longest);
+    longest
+}
+
+/*
+ * Pre-Processing Helpers which handle formatting
+ *
+ */
+
+fn break_it_up(data: Vec<TrollRecordable>, maximum: usize) -> (Vec<String>, Vec<Vec<f64>>) {
+    // actual max for this function
+    let max = maximum + 1;
+    let mut names: Vec<String> = vec!["Damage".into()];
+    let damages: Vec<f64> = (0..max).map(|x| x as f64).collect();
+    let mut values: Vec<Vec<f64>> = vec![damages];
+    for item in data {
+        let (name, stats) = item.split();
+        assert_eq!(stats.len(), max, "expected stats to have same length as everything else. length:'{}' expected:'{}' for value:'{}'", stats.len(), max, &name);
+        names.push(name);
+        values.push(stats);
+    }
+
+    // debug assertions
+    assert_eq!(
+        names.len(),
+        values.len(),
+        "expected # of names to be the same as # of columns. names:'{}' columns:'{}'",
+        names.len(),
+        values.len()
+    );
+    (names, values)
 }
 
 /*

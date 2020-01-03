@@ -39,6 +39,12 @@ impl TrollData {
             self.data.append(DataPoint::prob_zero(curr));
         }
     }
+
+    /// this is sort of the inverse of `pad_to` instead of adding values which are zero
+    /// it removes them.
+    pub fn trim_less_than(&mut self, cutoff: &f64) {
+        self.data.remove_smaller(cutoff);
+    }
 }
 impl Index<usize> for TrollData {
     type Output = DataPoint;
@@ -111,12 +117,18 @@ impl From<TrollLine> for DataPoint {
     }
 }
 impl DataPoint {
+    /// generates a place holder value
     fn prob_zero(value: usize) -> DataPoint {
         DataPoint {
             value,
             prob: 0.0,
             accum: 0.0,
         }
+    }
+
+    /// returns if this value is below the cutoff
+    fn accum_below_cutoff(&self, cutoff: &f64) -> bool {
+        self.accum < *cutoff
     }
 }
 
@@ -159,6 +171,23 @@ impl DataCollector {
 
     fn append(&mut self, arg: DataPoint) {
         self.data.push(arg);
+    }
+
+    fn remove_smaller(&mut self, cutoff: &f64) {
+        // count the number of elements we can remove until
+        // a non-cutoff value is encountered
+        let mut to_remove = 0usize;
+        for index in (0..self.len()).rev() {
+            if self.data[index].accum_below_cutoff(cutoff) {
+                to_remove += 1;
+            } else {
+                break;
+            }
+        }
+        // drop that many elements from the end of the array
+        for _ in 0..to_remove {
+            self.data.pop();
+        }
     }
 }
 

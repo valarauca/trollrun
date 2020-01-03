@@ -38,6 +38,16 @@ pub struct TrollRecordable {
     pub name: String,
     pub result: TrollData,
 }
+impl TrollRecordable {
+    pub fn split(self) -> (String, Vec<f64>) {
+        let name = self.name;
+        let mut data = Vec::with_capacity(self.result.len());
+        for index in 0..self.result.len() {
+            data.push(self.result[index].accum);
+        }
+        (name, data)
+    }
+}
 
 /// RunResult contains the output of the orginal data.
 pub enum RunResult {

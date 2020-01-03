@@ -43,7 +43,7 @@ path = "/path/to/output.csv"
 seperator = ','
 quote = '"'
 precision = 12
-zero_path = 3
+zero_pad = 3
 flush_to_zero = 0.0001
 ```
 
