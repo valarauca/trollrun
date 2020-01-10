@@ -12,6 +12,8 @@ pub fn run_program(runs: Vec<TrollRun>, writer: &mut CSVWriter) {
             handles.push(build_thread(item));
         }
 
+        // we will block ourselves once we try to join and be scheduled off
+
         // collect their output
         handles
             .into_iter()
