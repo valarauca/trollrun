@@ -2,7 +2,6 @@
 
 #[macro_use]
 extern crate lazy_static;
-extern crate crossbeam;
 extern crate csv;
 extern crate regex;
 extern crate serde;
