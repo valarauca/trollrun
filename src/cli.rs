@@ -4,9 +4,25 @@ use clap::{App, Arg, ArgMatches};
 
 use super::unmarshal::ConfigFormat;
 
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub enum StatBehavior {
+    Accumulate,
+    RawStats,
+}
+impl From<bool> for StatBehavior {
+    fn from(x: bool) -> StatBehavior {
+        if x {
+            StatBehavior::Accumulate
+        } else {
+            StatBehavior::RawStats
+        }
+    }
+}
+
+/// AppConfig declares a lot of information about how the program should function.
 pub struct AppConfig {
     pub file_path: String,
-    pub accumulate: bool,
+    pub behavior: StatBehavior,
 }
 impl Default for AppConfig {
     fn default() -> AppConfig {
@@ -14,7 +30,7 @@ impl Default for AppConfig {
         let matches = app.get_matches();
         AppConfig {
             file_path: matches.value_of("FILE").unwrap().to_string(),
-            accumulate: matches.is_present("accum"),
+            behavior: StatBehavior::from(matches.is_present("accum")),
         }
     }
 }
@@ -30,8 +46,9 @@ fn build_cli() -> App<'static, 'static> {
                 .index(1)
                 .takes_value(true)
                 .required(true)
+                .env("TROLLRUN_INPUT_FILE_PATH")
                 .validator(validate_input_file)
-                .help("the configuration file for the build"),
+                .help("the configuration toml file for the build"),
         )
         .arg(
             Arg::with_name("accum")

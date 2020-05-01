@@ -1,9 +1,10 @@
 use std::thread::{Builder, JoinHandle};
 
+use super::super::cli::AppConfig;
 use super::super::marshal::csv::ser::CSVWriter;
 use super::runs::{TrollRecordable, TrollRun};
 
-pub fn run_program(runs: Vec<TrollRun>, writer: &mut CSVWriter) {
+pub fn run_program(runs: Vec<TrollRun>, writer: &mut CSVWriter, config: &AppConfig) {
     // run all the various troll programs and collect their output
     let output_data: Vec<TrollRecordable> = {
         // spawn all threads, collect all handles.
@@ -21,7 +22,9 @@ pub fn run_program(runs: Vec<TrollRun>, writer: &mut CSVWriter) {
             .filter_map(|output| output)
             .collect()
     };
-    writer.serialize_output(output_data).unwrap();
+    writer
+        .serialize_output(output_data, config.behavior)
+        .unwrap();
 }
 
 fn build_thread(arg: TrollRun) -> JoinHandle<Option<TrollRecordable>> {

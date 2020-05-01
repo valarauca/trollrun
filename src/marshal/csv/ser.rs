@@ -3,6 +3,7 @@ use std::io;
 use super::super::super::csv::{QuoteStyle, Result, Terminator, Writer, WriterBuilder};
 use super::super::super::serde::Deserialize;
 
+use super::super::super::cli::StatBehavior;
 use super::super::super::exec::runs::TrollRecordable;
 
 /// CSVWriter handles the semantics of writing data to the underlying file
@@ -55,12 +56,16 @@ impl CSVWriter {
     }
 
     /// handles splitting & mangling the data before writing it
-    pub fn serialize_output(&mut self, data: Vec<TrollRecordable>) -> Result<()> {
+    pub fn serialize_output(
+        &mut self,
+        data: Vec<TrollRecordable>,
+        behavior: StatBehavior,
+    ) -> Result<()> {
         let mut data = data;
         // remove cut off data, and padd to equal length
         let longest = preprocess(&self.flush_to_zero, &mut data);
         // split our data into 2 different components (names & stats)
-        let (names, stats) = break_it_up(data, longest);
+        let (names, stats) = break_it_up(data, longest, behavior);
 
         // build a buffer to hold our serialized data
         let mut output_buffer: Vec<f64> = (0..names.len()).map(|_| 0.0).collect();
@@ -152,14 +157,18 @@ fn preprocess(cutoff: &f64, data: &mut Vec<TrollRecordable>) -> usize {
  *
  */
 
-fn break_it_up(data: Vec<TrollRecordable>, maximum: usize) -> (Vec<String>, Vec<Vec<f64>>) {
+fn break_it_up(
+    data: Vec<TrollRecordable>,
+    maximum: usize,
+    behavior: StatBehavior,
+) -> (Vec<String>, Vec<Vec<f64>>) {
     // actual max for this function
     let max = maximum + 1;
     let mut names: Vec<String> = vec!["Damage".into()];
     let damages: Vec<f64> = (0..max).map(|x| x as f64).collect();
     let mut values: Vec<Vec<f64>> = vec![damages];
     for item in data {
-        let (name, stats) = item.split();
+        let (name, stats) = item.split(behavior);
         assert_eq!(stats.len(), max, "expected stats to have same length as everything else. length:'{}' expected:'{}' for value:'{}'", stats.len(), max, &name);
         names.push(name);
         values.push(stats);

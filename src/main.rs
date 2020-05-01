@@ -21,12 +21,11 @@ use self::unmarshal::ConfigFormat;
 fn main() {
     // read OS flags
     let flags = AppConfig::default();
-
     // load config
     let config = ConfigFormat::new(&flags.file_path).expect("file was validated by cli");
     let runs = config.build_runs();
     // build our output format
     let mut csv_config = CSVConfig::build_config(&config.csv);
-    run_program(runs, &mut csv_config);
+    run_program(runs, &mut csv_config, &flags);
     csv_config.flush().unwrap();
 }

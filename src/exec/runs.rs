@@ -1,6 +1,7 @@
 use std::io::Error;
 use std::process::Command;
 
+use super::super::cli::StatBehavior;
 use super::data::TrollData;
 use super::parser::TrollLine;
 
@@ -39,11 +40,19 @@ pub struct TrollRecordable {
     pub result: TrollData,
 }
 impl TrollRecordable {
-    pub fn split(self) -> (String, Vec<f64>) {
+    pub fn split(self, behavior: StatBehavior) -> (String, Vec<f64>) {
         let name = self.name;
         let mut data = Vec::with_capacity(self.result.len());
         for index in 0..self.result.len() {
-            data.push(self.result[index].accum);
+            // what we output depends on our behavior enum
+            match behavior {
+                StatBehavior::Accumulate => {
+                    data.push(self.result[index].accum);
+                }
+                StatBehavior::RawStats => {
+                    data.push(self.result[index].prob);
+                }
+            }
         }
         (name, data)
     }
