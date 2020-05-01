@@ -10,13 +10,14 @@ For starter you will need the [`troll`](http://hjemmesider.diku.dk/~torbenm/Trol
 code for it can be found [here as a .zip](http://hjemmesider.diku.dk/~torbenm/Troll/Troll.zip).
 
 To compile the source you will need the [moscow ml compiler](https://mosml.org/). 
-
 Once you have moscow-ml installed, you can compile troll via the shell scripts within the the
 .zip, and play around.
 
 ### How to setup trollrun
 
 You will need the rust-compiler, and possibly git to download & compile this tool.
+
+This [link will instruct you how to install it](https://www.rust-lang.org/tools/install).
 
 ### How to use trollrun
 
@@ -77,4 +78,13 @@ The complex description allows for passing of CLI arguments to troll to provide 
 
 This allows for the same program to be executed in multiple different manners
 
+### troll give me out-of-memory errors when I run it
+
+The Moscow-ML project never updated its defaults for 64bit memory. 
+
+I have a fork of the project to support the expanded memory on [64bit systems here](https://github.com/valarauca/mosml).
+This fork doesn't support 32bit or 16bit systems properly (I quickly hacked together the change), or power-pc.
+If you are using a processor which was made after ~2004 that likely doesn't matter to you.
+
+You'll need gnu build tools (gcc, ld, make, etc.). 
 
