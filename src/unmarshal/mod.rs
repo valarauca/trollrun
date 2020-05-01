@@ -19,18 +19,17 @@ pub struct ConfigFormat {
 }
 impl ConfigFormat {
     // load a config from the command line interface
-    pub fn new() -> ConfigFormat {
-        let path = match std::env::args().skip(1).next() {
-            Option::None => panic!("provide 1 argument to run that config"),
-            Option::Some(path) => path,
-        };
+    pub fn new(path: &str) -> Result<ConfigFormat, String> {
         let config = match ::std::fs::read_to_string(&path) {
-            Err(e) => panic!("failed to open:'{}' error:'{:?}'", &path, e),
+            Err(e) => return Err(format!("failed to open:'{}' error:'{:?}'", &path, e)),
             Ok(config) => config,
         };
         match from_str::<ConfigFormat>(&config) {
-            Err(e) => panic!("failed to parse config:'{}' error:'{:?}'", &path, e),
-            Ok(config) => config,
+            Err(e) => Err(format!(
+                "failed to parse config:'{}' error:'{:?}'",
+                &path, e
+            )),
+            Ok(config) => Ok(config),
         }
     }
 
